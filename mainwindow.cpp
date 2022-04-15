@@ -7,6 +7,8 @@
 #include <QTextStream>
 #include<QFile>
 #include<QStringList>
+#include<QCheckBox>
+
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
     ui(new Ui::MainWindow)
@@ -40,12 +42,18 @@ MainWindow::MainWindow(QWidget *parent) :
                     }");
     initUI();
 
+    showMsg("加载成功");
+
 }
 
 
 void MainWindow::AddRow()
 {
-      ui->tableWidget->insertRow(ui->tableWidget->rowCount());
+    int rowcount=ui->tableWidget->rowCount();
+    ui->tableWidget->insertRow(rowcount);
+    ui->tableWidget->setCellWidget(rowcount,2,new QCheckBox());
+    showMsg("添加行成功");
+
 }
 
 void MainWindow::DelRow(int t)
@@ -66,14 +74,54 @@ void MainWindow::DelRow(int t)
         }
     }
 
+    showMsg("删除行成功");
+
+
 }
 
+void MainWindow::DelAllRow()
+{
 
+    while(ui->tableWidget->rowCount()>0)
+    {
+        ui->tableWidget->removeRow(ui->tableWidget->rowCount()-1);
+    }
+
+    showMsg("清空行成功");
+
+}
+#include<QCloseEvent>
+void MainWindow::closeEvent(QCloseEvent *event)
+{
+    SaveFile();
+
+
+    if(QMessageBox::Yes==QMessageBox::question(this,"退出","数据已保存,正在退出,是否继续?",QMessageBox::Yes,QMessageBox::No))
+    {
+
+        event->accept();
+    }else{
+        event->ignore();
+    }
+}
+
+void MainWindow::showMsg(QString msg)
+{
+    ui->statusBar->showMessage(msg);
+}
 
 void MainWindow::initUI()
 {
+
+
+    for(int i=0;i<ui->tableWidget->rowCount();i++)
+    {
+        ui->tableWidget->setCellWidget(i,2,new QCheckBox());
+    }
+
+
     this->centralWidget()->setLayout(ui->gridLayout);
-    ui->tableWidget->setHorizontalHeaderLabels(QStringList()<<"菜单名称"<<"路径"<<"描述"<<"图标");
+    ui->tableWidget->setHorizontalHeaderLabels(QStringList()<<"菜单名称*"<<"路径*"<<"是否编辑"<<"描述"<<"图标"<<"父级菜单");
 
 
     connect(ui->quit,&QAction::triggered,this,[&](){
@@ -88,6 +136,8 @@ void MainWindow::initUI()
 
 
     ui->tableWidget->setContextMenuPolicy(Qt::CustomContextMenu);
+
+
 
     connect(ui->tableWidget,&QTableWidget::customContextMenuRequested,this,&MainWindow::slotRightContext);
 
@@ -116,8 +166,6 @@ void MainWindow::initUI()
 
     });
 
-
-
      ui->mainToolBar->addAction(QIcon(":/png/add.png"),"添加行",[&](){
 
          AddRow();
@@ -141,7 +189,6 @@ void MainWindow::initUI()
 
 
       ui->mainToolBar->addAction(QIcon(":/png/delete.png"),"清空",[&](){
-
 
           if(QMessageBox::Yes==QMessageBox::question(this,"清空","此操作将清空表格以及生成结果,是否继续?",QMessageBox::Yes,QMessageBox::No))
           {
@@ -197,9 +244,7 @@ void MainWindow::ReadFile()
     }
 
 
-
     {
-
                QFile f(data);
 
 
@@ -215,15 +260,23 @@ void MainWindow::ReadFile()
                    {
                        QString strline=stream.readLine();
 
-                       if(strline.trimmed().length()==0) continue;
-
                        QString strRaw=QString(QByteArray::fromBase64(strline.toUtf8()));
 
+                       if(strRaw.trimmed().length()==0) continue;
 
                         list.append(strRaw);
 
                    }
                     f.close();
+
+
+                    if(list.count()>0)
+                    {
+                        DelAllRow();
+                    }
+
+
+
 
                     for(int i=0;i<list.count();i++)
                     {
@@ -232,16 +285,38 @@ void MainWindow::ReadFile()
 
                         QStringList ll=strRaw.split(";");
 
+                        if(ll.count()==0)continue;
+
+
                         ui->tableWidget->insertRow(ui->tableWidget->rowCount());
 
                         for(int j=0;j<ll.count();j++)
                         {
 
-                            if(QString(ll[j]).length()>0)
+                            if(j==2)
                             {
-                                ui->tableWidget->setItem(i,j,new QTableWidgetItem(ll[j]));
+                                QCheckBox *ck=new QCheckBox();
+                                if(QString(ll[j]).length()>0)
+                                {
+                                    if(QString(ll[j])=="1")
+                                    {
 
+                                        ck->setChecked(true);
+
+                                    }else{
+                                        ck->setChecked(false);
+
+                                    }
+                                }
+                                 ui->tableWidget->setCellWidget(i,j,ck);
+                            }else{
+                                if(QString(ll[j]).length()>0)
+                                {
+                                    ui->tableWidget->setItem(i,j,new QTableWidgetItem(ll[j]));
+
+                                }
                             }
+
 
                         }
                     }
@@ -296,24 +371,50 @@ void MainWindow::SaveFile()
                {
 
                    QStringList list;
-                   for(int j=0;j<cols;j++){
-                       QTableWidgetItem *item= ui->tableWidget->item(i,j);
-
-                       if(item&&item->text().length()>0)
+                   for(int j=0;j<cols;j++)
+                   {
+                       if(j==2)
                        {
-                           list.append(item->text());
+                             QCheckBox*ck= (QCheckBox*)(ui->tableWidget->cellWidget(i,j));
+                              if(ck!=nullptr)
+                              {
+                                  if(ck->isChecked())
+                                  {
+                                      list.append("1");
+                                  }else{
+                                      list.append("0");
+                                  }
+                              }else{
+                                   list.append("0");
+                              }
+
                        }else{
-                           list.append("");
+                           QTableWidgetItem *item= ui->tableWidget->item(i,j);
+
+                           if(item&&item->text().length()>0)
+                           {
+                               list.append(item->text());
+                           }else{
+                               if(j==0)
+                               {
+                                    break;
+                               }
+
+                           }
                        }
+
 
                    }
 
+                    if(list.count()>0)
+                    {
+                       QString strjoin=list.join(";");
 
-                   QString strjoin=list.join(";");
+                       QString strLine=QString::fromUtf8(strjoin.toUtf8().toBase64());
 
-                  QString strLine=QString::fromUtf8(strjoin.toUtf8().toBase64());
+                       stream<<strLine<<"\n";
+                    }
 
-                  stream<<strLine<<"\n";
 
                }
                 f.close();
@@ -341,7 +442,8 @@ void MainWindow::DoMakeCode()
     for(int i=0;i<rows;i++)
     {
 
-        for(int j=0;j<cols;j++){
+        for(int j=0;j<cols;j++)
+        {
 
             if(j==0||j==1)
             {
@@ -351,9 +453,13 @@ void MainWindow::DoMakeCode()
                 {
 
                 }else{
-                      strErr+=QString("第%1行%2列数据无效,").arg(i+1).arg(j+1);
+                      strErr+=QString("第%1行%2列数据无效\n").arg(i+1).arg(j+1);
                 }
             }else if(j==2){
+
+
+
+            }else if(j==3){
                 QTableWidgetItem *item= ui->tableWidget->item(i,j);
                 QTableWidgetItem *item0= ui->tableWidget->item(i,0);
 
@@ -367,7 +473,7 @@ void MainWindow::DoMakeCode()
                     }
 
                 }
-            }else if(j==3){
+            }else if(j==4){
                 QTableWidgetItem *item= ui->tableWidget->item(i,j);
 
                 if(item&&item->text().length()>0)
@@ -376,6 +482,17 @@ void MainWindow::DoMakeCode()
                 }else{
 
                       ui->tableWidget->setItem(i,j,new QTableWidgetItem("iconzhongduanguanli"));
+                }
+            }else if(j==5)
+            {
+                QTableWidgetItem *item= ui->tableWidget->item(i,j);
+
+                if(item&&item->text().length()>0)
+                {
+
+                }else{
+
+                      ui->tableWidget->setItem(i,j,new QTableWidgetItem("info_basic"));
                 }
             }
         }
@@ -394,11 +511,15 @@ void MainWindow::DoMakeCode()
     for(int i=0;i<rows;i++)
     {
 
-            QTableWidgetItem *item1= ui->tableWidget->item(i,0);
-            QTableWidgetItem *item2= ui->tableWidget->item(i,1);
-            QTableWidgetItem *item3= ui->tableWidget->item(i,2);
-            QTableWidgetItem *item4= ui->tableWidget->item(i,3);
-            datas.append(DataItem(item1->text(),item2->text(),item3->text(),item4->text()));
+            QTableWidgetItem *item0= ui->tableWidget->item(i,0);
+            QTableWidgetItem *item1= ui->tableWidget->item(i,1);
+            QCheckBox *item2=(QCheckBox*)ui->tableWidget->cellWidget(i,2);
+
+            QTableWidgetItem *item3= ui->tableWidget->item(i,3);
+            QTableWidgetItem *item4= ui->tableWidget->item(i,4);
+            QTableWidgetItem *item5= ui->tableWidget->item(i,5);
+
+            datas.append(DataItem(item0->text(),item1->text(),item2==nullptr?false:item2->isChecked(),item3->text(),item4->text(),item5->text()));
 
     }
 
@@ -413,6 +534,7 @@ void MainWindow::DoMakeCode()
     ui->txtZh->setText(strZhTmpl(datas));
 
 
+    showMsg("生成成功");
 
 //    QString strCount=QString("%1").arg(rows);
 
@@ -427,12 +549,17 @@ QString MainWindow::strMenuTmpl(QList<DataItem> &datas)
 
     for(int i=0;i<datas.count();i++)
     {
-        DataItem d=datas[i];
-        str+="        <!--"+d.StrName+"-->\n";
-        str+="        <subItems>\n";
-        str+="          <menu name=\"info_"+d.StrPath+"\" displayName=\"info_"+d.StrPath+"\" icon=\""+d.StrIcon+"\" url=\""+d.StrPath+"\"   requiredPermissionName=\"info_"+d.StrPath+"\" description=\""+d.StrDesc+"\">\n";
-        str+="          </menu>\n";
-        str+="        </subItems>\n";
+             DataItem d=datas[i];
+
+
+            str+="        <!--"+d.StrName+"-->\n";
+            str+="        <subItems>\n";
+
+
+            str+="          <menu name=\"info_"+d.StrPath+"Show\" displayName=\"info_"+d.StrPath+"Show\" icon=\""+d.StrIcon+"\" url=\""+d.StrPath+"\"   requiredPermissionName=\"info_"+d.StrPath+"Show\" description=\""+d.StrDesc+"\">\n";
+
+            str+="          </menu>\n";
+            str+="        </subItems>\n";
 
     }
 
@@ -448,7 +575,7 @@ QString MainWindow::strZhTmpl(QList<DataItem> &datas)
     for(int i=0;i<datas.count();i++)
     {
          DataItem d=datas[i];
-         str+="    <text name=\"info_"+d.StrPath+"\" value=\""+d.StrName+"\"></text>\n";
+         str+="    <text name=\"info_"+d.StrPath+"Show\" value=\""+d.StrName+"\"></text>\n";
 
     }
 
@@ -457,24 +584,22 @@ QString MainWindow::strZhTmpl(QList<DataItem> &datas)
 
 QString MainWindow::strCodeTmpl(QList<DataItem> &datas)
 {
-    QString str="";
 
+    QString  str="";
+
+    str+="            \n";
     for(int i=0;i<datas.count();i++)
     {
-         DataItem d=datas[i];
-         str+="            var info_"+d.StrPath+" = info_basic.CreateChildPermission(\"info_"+d.StrPath+"_parent\", L(\"info_"+d.StrPath+"\")); //"+d.StrName+"\n";
-    }
 
+        DataItem d=datas[i];
+        str+="            //"+d.StrName+"\n";
+        str+="            var info_"+d.StrPath+"List = "+d.StrParant+".CreateChildPermission(\"info_"+d.StrPath+"_parent\", L(\"info_"+d.StrPath+"Show\"));//"+d.StrName+"\n";
+        str+="            info_"+d.StrPath+"List.CreateChildPermission(\"info_"+d.StrPath+"Show\", L(\"info_"+d.StrPath+"Show\"), properties: Show);//"+d.StrName+"\n";
 
-    for(int i=0;i<3;i++)
-    {
-        str+="\n";
-    }
-
-    for(int i=0;i<datas.count();i++)
-    {
-         DataItem d=datas[i];
-         str+="            info_"+d.StrPath+".CreateChildPermission(\"info_"+d.StrPath+"\", L(\"info_"+d.StrPath+"\"), properties: Show);//"+d.StrName+"\n";
+        if(d.Check)
+        {
+            str+="            info_"+d.StrPath+"List.CreateChildPermission(\"info_"+d.StrPath+"Edit\", L(\"info_"+d.StrPath+"Show\"), properties: Edit);//"+d.StrName+"\n";
+        }
     }
 
     return str;

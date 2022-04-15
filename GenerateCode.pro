@@ -26,7 +26,7 @@ RESOURCES += \
 
 RC_ICONS =logo.ico
 
-VERSION = 1.0.1.0
+VERSION = 1.0.2.0
 
 
 QMAKE_TARGET_PRODUCT =GenerateCode
