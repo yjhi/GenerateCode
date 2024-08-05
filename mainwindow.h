@@ -24,6 +24,8 @@ private:
     Ui::MainWindow *ui;
     void initUI();
 
+
+
     QMenu *rightMenu;
     int selRow;
 
@@ -35,6 +37,9 @@ private:
     void DelRow(int t=0);
     void ReadFile();
     void SaveFile();
+    void DelAllRow();
+    void closeEvent(QCloseEvent *event);
+    void showMsg(QString msg);
 };
 
 #endif // MAINWINDOW_H
