@@ -11,7 +11,7 @@
    </rect>
   </property>
   <property name="windowTitle">
-   <string>MainWindow</string>
+   <string>GenerateCode</string>
   </property>
   <widget class="QWidget" name="centralWidget">
    <widget class="QWidget" name="gridLayoutWidget">
@@ -156,7 +156,7 @@
      <x>0</x>
      <y>0</y>
      <width>795</width>
-     <height>23</height>
+     <height>21</height>
     </rect>
    </property>
    <widget class="QMenu" name="menu">
